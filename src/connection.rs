@@ -369,12 +369,15 @@ fn handle_connection_request<
         let mut uri_changed = false;
         let mut module_changed = false;
         if let Some(uri) = &latest_request.uri {
-            uri_changed = uri != &config.uri;
+            println!("latest {}", uri.clone());
+            uri_changed = uri.clone() != config.uri;
         }
 
         if let Some(module_name) = &latest_request.module_name {
-            module_changed = module_name != &config.module_name;
+            println!("latest {}", module_name.clone());
+            module_changed = module_name.clone() != config.module_name;
         }
+        println!("changed {} {}", uri_changed, module_changed);
 
         if !uri_changed && !module_changed {
             // No config changes, just clear and return
@@ -382,9 +385,10 @@ fn handle_connection_request<
                 .resource_mut::<Messages<RequestStdbConnectionMessage>>()
                 .clear();
         }
-
+        println!("Attempting to disconnect");
         // Config changed, disconnect first
         let _ = current_conn.disconnect();
+        world.remove_resource::<StdbConnection<C>>();
     }
 
     let connect_config = {
