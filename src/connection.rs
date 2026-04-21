@@ -377,11 +377,11 @@ fn handle_connection_request<
         }
 
         if !uri_changed && !module_changed {
-            // No config changes, just clear and return
+            // No config changes, just return (drain should of already cleared)
             return;
         }
 
-        // Config changed, disconnect first
+        // Config changed, disconnect first then schedule a new connection.
         let _ = current_conn.disconnect();
         config
             .disconnected_tx
@@ -390,6 +390,7 @@ fn handle_connection_request<
         world
             .resource_mut::<Messages<RequestStdbConnectionMessage>>()
             .write(latest_request.clone());
+        return;
     }
 
     let connect_config = {
