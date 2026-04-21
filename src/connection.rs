@@ -355,12 +355,6 @@ fn handle_connection_request<
 >(
     world: &mut World,
 ) {
-    if world.get_resource::<StdbConnection<C>>().is_some() {
-        return world
-            .resource_mut::<Messages<RequestStdbConnectionMessage>>()
-            .clear();
-    }
-
     let Some(latest_request) = world
         .resource_mut::<Messages<RequestStdbConnectionMessage>>()
         .drain()
@@ -368,6 +362,30 @@ fn handle_connection_request<
     else {
         return;
     };
+    //Check if a connection already exists, if config has changed, disconnect first, otherwise ignore.
+    if let Some(current_conn) = world.get_resource::<StdbConnection<C>>() {
+        let config = world.resource::<StdbConnectionConfig<C, M>>();
+        // Compare current config with latest request
+        let mut uri_changed = false;
+        let mut module_changed = false;
+        if let Some(uri) = &latest_request.uri {
+            uri_changed = uri != &config.uri;
+        }
+
+        if let Some(module_name) = &latest_request.module_name {
+            module_changed = module_name != &config.module_name;
+        }
+
+        if !uri_changed && !module_changed {
+            // No config changes, just clear and return
+            return world
+                .resource_mut::<Messages<RequestStdbConnectionMessage>>()
+                .clear();
+        }
+
+        // Config changed, disconnect first
+        let _ = current_conn.disconnect();
+    }
 
     let connect_config = {
         let mut config = world.resource_mut::<StdbConnectionConfig<C, M>>();
